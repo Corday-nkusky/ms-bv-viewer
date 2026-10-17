@@ -23,35 +23,52 @@
 
 ## 快速开始
 
-### 1. 装 Python
+### 方式 A：不想装 Python（推荐）
 
-需要 Python 3.8 或更高。Windows 上去 [python.org](https://www.python.org/downloads/) 装，
-安装时**勾上 "Add Python to PATH"**。
-
-### 2. 把这个文件夹放进扫雷目录
-
-和 `replays` / `replays2` 放在**同一个文件夹**里（文件夹不用改名）：
+去 [Releases](https://github.com/Corday-nkusky/ms-bv-viewer/releases) 下载 **`ms-bv-viewer.exe`**（约 8.7 MB），
+直接丢进扫雷目录，双击就能用：
 
 ```
 D:\你的扫雷目录\
 ├── Arbiter.exe
 ├── replays\           ← 录像
 ├── replays2\          ← 录像
-├── stats.csv          ← 你的统计
-└── ms-bv-viewer\      ← 把本仓库整个放这里
+├── stats.csv
+└── ms-bv-viewer.exe   ← 就放这一个文件
+```
+
+黑窗口起来后浏览器自动打开页面，数据已经扫好了。关掉黑窗口（或页面右上角「停止服务」）即结束。
+
+> 这个 exe 是自带的，**不需要安装 Python，也不需要装任何运行库**。
+> 首次运行 Windows 可能弹「已保护你的电脑」——因为 exe 没有买代码签名证书，点
+> 「更多信息」→「仍要运行」即可。杀毒软件偶尔会误报 PyInstaller 打包的程序，加白名单就行。
+
+### 方式 B：有 Python 环境
+
+需要 Python 3.8 或更高。Windows 上去 [python.org](https://www.python.org/downloads/) 装，
+安装时**勾上 "Add Python to PATH"**。
+
+然后把这个文件夹放进扫雷目录（和 `replays` / `replays2` 同级），双击 `启动.cmd`：
+
+```
+D:\你的扫雷目录\
+├── Arbiter.exe
+├── replays\
+├── replays2\
+└── ms-bv-viewer\      ← 本仓库整个放这里
     ├── 启动.cmd
     ├── server.py
     └── app.html
 ```
 
-### 3. 双击 `启动.cmd`
-
-黑窗口跑起来后浏览器自动打开页面，数据已经扫好了。
-
-关掉黑窗口（或页面右上角点「停止服务」）即结束。
-
-> 从 GitHub 下载：右上角绿色 `Code` → `Download ZIP`，解压后把整个文件夹丢进扫雷目录。
+> 从 GitHub 下载：绿色 `Code` → `Download ZIP`，解压后把整个文件夹丢进扫雷目录。
 > 文件夹叫什么名字都行，程序会自己往上找 `replays`。
+
+macOS / Linux 用 `./start.sh`（同样需要 Python）。
+
+### 方式 C：自己打包 exe
+
+改了代码想重新打包，双击 `build.cmd`（需先有 Python），产物在 `dist\ms-bv-viewer.exe`。
 
 ---
 
@@ -105,6 +122,13 @@ python server.py --root "D:\Arbiter"
 --no-open       不自动打开浏览器
 ```
 
+exe 和源码都支持，例如：
+
+```bat
+ms-bv-viewer.exe --root "D:\我的扫雷"
+python server.py --root "D:\我的扫雷"
+```
+
 服务只监听 `127.0.0.1`，不对外网开放。
 
 ---
@@ -116,6 +140,10 @@ python server.py --root "D:\Arbiter"
 
 **双击 `启动.cmd` 一闪就没了**
 多半是没装 Python 或没加进 PATH。在命令行里运行 `python --version` 确认一下。
+如果用的是 exe 版，本身不需要 Python，闪退多半是被杀毒软件拦了。
+
+**exe 支持哪些系统？**
+只打了 Windows 64 位（扫雷客户端本身也是 Windows 的）。macOS / Linux 用源码版的 `start.sh`。
 
 **会不会改我的录像？**
 不会。全程只读，不写、不移动、不删除你的任何文件。导出 CSV 由浏览器另存。
@@ -136,6 +164,7 @@ python server.py --root "D:\Arbiter"
 | `app.html` | 单页前端，无外部依赖（图表是手写 canvas） |
 | `启动.cmd` | Windows 双击启动，自动找 `py` 或 `python` |
 | `start.sh` | macOS / Linux 启动脚本 |
+| `build.cmd` | 用 PyInstaller 打成单文件 exe，产物在 `dist\` |
 
 接口：`/api/records`（全量数据）、`/api/version`（目录指纹）、`/api/rescan`（强制重扫）、
 `/api/csv`、`/api/shutdown`。

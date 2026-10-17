@@ -33,8 +33,25 @@ import webbrowser
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-APP_HTML = os.path.join(HERE, "app.html")
+def _base_dirs():
+    """返回 (程序所在目录, 静态资源目录)。
+
+    源码运行时两者相同。PyInstaller 打成的单文件 exe 里，app.html 会被解压到
+    临时目录（sys._MEIPASS），但「程序位置」必须取 exe 自身所在目录——否则
+    会跑去 Temp 里找 replays，永远找不到。
+    """
+    if getattr(sys, "frozen", False):
+        return (os.path.dirname(os.path.abspath(sys.executable)),
+                getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(sys.executable))))
+    here = os.path.dirname(os.path.abspath(__file__))
+    return here, here
+
+
+HERE, RES_DIR = _base_dirs()
+APP_HTML = os.path.join(RES_DIR, "app.html")
+# 提示用户怎么带参数启动（exe 和源码两种形态）
+LAUNCHER = (os.path.basename(sys.executable) if getattr(sys, "frozen", False)
+            else "python server.py")
 
 LEVEL_ORDER = ["beg", "int", "exp"]
 LEVEL_CN = {"beg": "初级 Beg", "int": "中级 Int", "exp": "高级 Exp"}
@@ -53,7 +70,10 @@ AVF_DATE_RE = re.compile(rb"([0-9]{1,2})\.([0-9]{1,2})\.([0-9]{4})\.([0-9]{1,2})
 
 if hasattr(sys.stdout, "reconfigure"):
     try:
-        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        # 只在输出被重定向（管道 / 文件）时强制 UTF-8；
+        # 控制台里保持系统默认——Windows 控制台本身走 Unicode API，中文不会乱码。
+        if not sys.stdout.isatty():
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     except Exception:
         pass
 
@@ -518,7 +538,7 @@ def main(argv=None):
         print("\n  [!] 这个目录下没找到任何 .avf 录像。")
         print("      本程序要和 replays / replays2 放在同一个文件夹里。")
         print("      如果不在，关掉窗口，用参数指定你的扫雷目录：")
-        print('          python server.py --root "你的扫雷目录完整路径"')
+        print('          ' + LAUNCHER + ' --root "你的扫雷目录完整路径"')
         print("      （页面照样会打开，指定对了点「重新扫描」即可。）\n")
 
     httpd = ThreadingHTTPServer(("127.0.0.1", port), Handler)
@@ -538,4 +558,20 @@ def main(argv=None):
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except SystemExit:
+        raise
+    except KeyboardInterrupt:
+        sys.exit(130)
+    except Exception:
+        import traceback
+        traceback.print_exc()
+        # 双击 exe 出错时别让窗口一闪就没，让人看得见原因
+        if getattr(sys, "frozen", False):
+            try:
+                if sys.stdin and sys.stdin.isatty():
+                    input("\n出错了。按回车键关闭…")
+            except Exception:
+                pass
+        sys.exit(1)
