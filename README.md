@@ -25,7 +25,7 @@
 
 ### 方式 A：不想装 Python（推荐）
 
-去 [Releases](https://github.com/Corday-nkusky/ms-bv-viewer/releases) 下载 **`ms-bv-viewer.exe`**（约 8.7 MB），
+去 [Releases](https://github.com/Corday-nkusky/ms-bv-viewer/releases) 下载 **`ms-bv-viewer.exe`**（约 8.6 MB），
 直接丢进扫雷目录，双击就能用：
 
 ```
