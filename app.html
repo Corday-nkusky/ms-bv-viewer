@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>扫雷 BV 成绩台</title>
+<style>
+  :root{
+    --bg:#f4f6f9; --panel:#fff; --line:#e4e8ee; --txt:#151a21; --muted:#6d7784;
+    --accent:#2f6feb; --beg:#2ea05f; --int:#d1880f; --exp:#cc4a4d;
+    --shadow:0 1px 2px rgba(16,24,40,.05),0 8px 24px -18px rgba(16,24,40,.25);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--txt);
+       font:14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;
+       -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1220px;margin:0 auto;padding:0 20px 90px}
+
+  header{position:sticky;top:0;z-index:20;background:rgba(244,246,249,.88);
+         backdrop-filter:blur(8px);border-bottom:1px solid var(--line);margin-bottom:22px}
+  .head-in{max-width:1220px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  h1{font-size:17px;margin:0;letter-spacing:-.2px;white-space:nowrap}
+  h1 small{font-weight:400;color:var(--muted);font-size:12px;margin-left:8px}
+  .grow{flex:1}
+  .pill{font-size:12px;padding:3px 9px;border-radius:99px;background:#e9edf3;color:var(--muted);white-space:nowrap}
+  .pill.live{background:#e6f5ec;color:#1f7a45}
+  .pill.warn{background:#fdf1e0;color:#8a5a10}
+  .pill.err{background:#fdeaea;color:#a83232}
+  button{font:inherit;border:1px solid var(--line);background:var(--panel);color:var(--txt);
+         padding:6px 13px;border-radius:8px;cursor:pointer;transition:.15s;box-shadow:var(--shadow)}
+  button:hover{border-color:#c8cfda;background:#fafbfd}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  button.primary:hover{background:#2a63d4}
+  button:disabled{opacity:.45;cursor:default}
+
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px;
+        box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .card::after{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--c)}
+  .card.beg{--c:var(--beg)} .card.int{--c:var(--int)} .card.exp{--c:var(--exp)}
+  .card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .lvt{font-weight:700;font-size:12px;color:#fff;padding:2px 9px;border-radius:6px;background:var(--c)}
+  .big{font:650 32px/1.1 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:-1px;
+       font-variant-numeric:tabular-nums}
+  .big .u{font-size:13px;font-weight:400;color:var(--muted);letter-spacing:0;margin-left:3px}
+  .sub{color:var(--muted);font-size:12px;margin-bottom:8px}
+  .kv{display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted);
+      border-top:1px dashed var(--line);padding:5px 0}
+  .kv b{color:var(--txt);font-weight:600;font-variant-numeric:tabular-nums}
+  .kv b.mono{font-family:ui-monospace,Consolas,monospace}
+
+  section.card-block{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+                     padding:16px 18px;box-shadow:var(--shadow);margin-bottom:16px}
+  .block-head{display:flex;align-items:center;gap:12px;margin-bottom:6px;flex-wrap:wrap}
+  .block-head h2{font-size:14px;margin:0;font-weight:650}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .seg button{border:0;border-radius:0;box-shadow:none;padding:5px 12px;font-size:12.5px;color:var(--muted);
+              background:transparent}
+  .seg button.on{background:#eef3ff;color:var(--accent);font-weight:600}
+  .hint{color:var(--muted);font-size:12px}
+
+  .charts{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:10px}
+  .chart{position:relative;border:1px solid var(--line);border-radius:10px;padding:6px 6px 0;background:#fcfdfe}
+  .chart canvas{width:100%;height:210px;display:block;cursor:crosshair}
+  .chart .cap{font-size:12px;color:var(--muted);padding:2px 8px 6px;display:flex;justify-content:space-between}
+
+  .tbl-tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0 4px}
+  input[type=search]{font:inherit;padding:6px 11px;border:1px solid var(--line);border-radius:8px;
+                     width:230px;outline:none;background:#fff}
+  input[type=search]:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(47,111,235,.12)}
+  .scroll{max-height:min(62vh,660px);overflow:auto;border-top:1px solid var(--line);margin:6px -18px 0;padding:0}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:8px 14px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap;
+        font-variant-numeric:tabular-nums}
+  th{font-size:12px;color:var(--muted);font-weight:600;cursor:pointer;user-select:none;
+     position:sticky;top:0;background:var(--panel);z-index:2}
+  th:hover{color:var(--txt)}
+  th .ar{font-size:9px;opacity:.35;margin-left:4px}
+  th.on .ar{opacity:1;color:var(--accent)}
+  th.l,td.l{text-align:left}
+  tbody tr{cursor:pointer}
+  tbody tr:hover{background:#f5f8ff}
+  tbody tr.sel{background:#eaf1ff;box-shadow:inset 3px 0 0 var(--accent)}
+  td.mono{font-family:ui-monospace,Consolas,monospace}
+  td.t{font-weight:650}
+  td.file{text-align:left;max-width:430px;overflow:hidden;text-overflow:ellipsis;font-size:11.5px;color:var(--muted)}
+  .tag{display:inline-block;padding:1px 6px;border-radius:4px;font-size:11px;font-weight:600}
+  .tag.nf{background:#e8f1ff;color:#2f6feb}
+  .tag.fl{background:#fdeee8;color:#b25a2b}
+  .dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;vertical-align:1px}
+
+  #tooltip{position:fixed;pointer-events:none;background:#1c2330;color:#fff;font-size:12px;
+           padding:8px 10px;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.25);
+           opacity:0;transition:opacity .12s;z-index:50;line-height:1.55;max-width:320px}
+  #tooltip b{color:#9fc4ff;font-weight:600}
+
+  #detail{position:fixed;left:0;right:0;bottom:0;background:var(--panel);border-top:1px solid var(--line);
+          box-shadow:0 -8px 26px -18px rgba(16,24,40,.5);transform:translateY(100%);
+          transition:transform .18s ease;z-index:30}
+  #detail.show{transform:translateY(0)}
+  .d-in{max-width:1220px;margin:0 auto;padding:12px 20px;display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+  .d-main{flex:1;min-width:260px}
+  .d-title{font-weight:650;font-size:13px;display:flex;align-items:center;gap:8px}
+  .d-file{font-family:ui-monospace,Consolas,monospace;font-size:11.5px;color:var(--muted);
+          word-break:break-all;margin-top:2px}
+  .d-close{border:0;background:transparent;font-size:18px;line-height:1;color:var(--muted);cursor:pointer}
+
+  footer{color:var(--muted);font-size:12px;line-height:1.9;margin-top:24px;border-top:1px solid var(--line);padding-top:14px}
+  code{background:#eef1f5;padding:1px 5px;border-radius:4px;font-size:11.5px}
+  .toast{position:fixed;left:50%;transform:translate(-50%,-14px);top:70px;background:#1c2330;color:#fff;
+         font-size:12.5px;padding:8px 14px;border-radius:99px;opacity:0;transition:.2s;z-index:60;
+         pointer-events:none}
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+  .empty-hint{background:#fff8e8;border:1px solid #f0d9a8;border-radius:12px;padding:16px 18px;
+              margin-bottom:18px;font-size:13px;line-height:1.85;color:#6b4c12}
+  .empty-hint b{color:#4a3208}
+  .empty-hint code{background:#f6ecd6;color:#5a3f0c}
+  @media(max-width:900px){
+    .cards{grid-template-columns:1fr}
+    .charts{grid-template-columns:1fr}
+    td.file{display:none}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="head-in">
+    <h1>扫雷 BV 成绩台<small>Beg / Int / Exp × 每个 3BV 的最快成绩</small></h1>
+    <span id="live" class="pill">连接中…</span>
+    <div class="grow"></div>
+    <button id="btnRescan" class="primary">重新扫描</button>
+    <button id="btnCsv">导出 CSV</button>
+    <button id="btnStop" title="停止本地服务">停止服务</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="cards" id="cards"></div>
+
+  <section class="card-block">
+    <div class="block-head">
+      <h2>每个 BV 的成绩曲线</h2>
+      <div class="seg" id="metricSeg">
+        <button data-m="time" class="on">最快时间</button>
+        <button data-m="bvs">3BV/s</button>
+      </div>
+      <span class="hint" id="chartHint">横轴 BV，纵轴最快时间；点圆点可定位到表格</span>
+    </div>
+    <div class="charts" id="charts"></div>
+  </section>
+
+  <section class="card-block">
+    <div class="block-head">
+      <h2>全部记录</h2>
+      <span class="hint" id="rowCount"></span>
+    </div>
+    <div class="tbl-tools">
+      <input type="search" id="q" placeholder="搜索 BV 或文件名…">
+      <div class="seg" id="levelSeg">
+        <button data-l="" class="on">全部</button>
+        <button data-l="beg">初级</button>
+        <button data-l="int">中级</button>
+        <button data-l="exp">高级</button>
+      </div>
+    </div>
+    <div class="scroll">
+      <table id="tbl">
+        <thead><tr>
+          <th class="l" data-s="level">级别</th>
+          <th data-s="bv">BV<span class="ar">↕</span></th>
+          <th data-s="time">最快时间 (s)<span class="ar">↕</span></th>
+          <th data-s="bvs">3BV/s<span class="ar">↕</span></th>
+          <th data-s="games">该 BV 局数<span class="ar">↕</span></th>
+          <th>风格</th>
+          <th data-s="date">录制日期<span class="ar">↕</span></th>
+          <th>NF 最快</th>
+          <th>FL 最快</th>
+          <th class="l">录像文件</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    口径：BV = 3BV = BBBV；3BV/s = BV ÷ time；时间为文件名中的两位小数（Arbiter <code>rtime</code>，0 秒起算）。<br>
+    记录 = 同一级别 + 同一 BV 下 time 最小的单局；主表 NF/FL 混合排名，另列分风格最优。<br>
+    日期与核对值来自 <code>.avf</code> 内嵌数据（头部时间戳 / 尾部 <code>RealTime</code>），不是文件名。<br>
+    <span id="meta"></span>
+  </footer>
+</div>
+
+<div id="tooltip"></div>
+<div id="toast" class="toast"></div>
+<div id="detail"><div class="d-in">
+  <div class="d-main">
+    <div class="d-title" id="dTitle"></div>
+    <div class="d-file" id="dFile"></div>
+  </div>
+  <button id="dCopy">复制路径</button>
+  <button class="d-close" id="dClose">×</button>
+</div></div>
+
+<script>
+const LEVELS = ['beg', 'int', 'exp'];
+const LCN = { beg: '初级 Beg', int: '中级 Int', exp: '高级 Exp' };
+const LCOLOR = { beg: '#2ea05f', int: '#d1880f', exp: '#cc4a4d' };
+const $ = (s) => document.querySelector(s);
+
+let DATA = null;          // 服务器返回的完整数据
+let VIEW = { metric: 'time', level: '', q: '', sortKey: 'level', sortDir: 'asc', selected: null };
+
+const fmt = (v, n = 2) => (v === null || v === undefined) ? '—' : Number(v).toFixed(n);
+const toast = (msg) => {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 1800);
+};
+
+/* ---------------- 数据加载 ---------------- */
+
+async function load(rescan = false) {
+  const url = rescan ? '/api/rescan' : '/api/records';
+  const pill = $('#live');
+  pill.className = 'pill';
+  pill.textContent = rescan ? '正在扫描…' : '读取中…';
+  try {
+    const r = await fetch(url, { cache: 'no-store' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    DATA = await r.json();
+    renderAll();
+    const v = DATA.verification;
+    pill.className = 'pill live';
+    pill.textContent = v.mismatch
+      ? `已连接 · ${v.mismatch} 条时间对不上`
+      : `已连接 · ${DATA.scan.unique.toLocaleString()} 局 · ${DATA.elapsedMs} ms`;
+    if (v.mismatch) pill.className = 'pill warn';
+  } catch (e) {
+    pill.className = 'pill err';
+    pill.textContent = '连接失败：' + e.message;
+  }
+}
+
+/* ---------------- 卡片 ---------------- */
+
+function renderCards() {
+  $('#cards').innerHTML = LEVELS.map(lv => {
+    const s = DATA.summary[lv];
+    if (!s || !s.bvCount) return '';
+    return `<div class="card ${lv}">
+      <div class="card-top"><span class="lvt">${LCN[lv]}</span>
+        <span class="hint">${s.games.toLocaleString()} 局 · ${s.bvCount} 个 BV</span></div>
+      <div class="big">${fmt(s.fastTime)}<span class="u">s</span></div>
+      <div class="sub">最快单局 · BV=${s.fastBv}</div>
+      <div class="kv"><span>BV 覆盖</span><b class="mono">${s.bvMin} – ${s.bvMax}</b></div>
+      <div class="kv"><span>最高 3BV/s</span><b class="mono">${fmt(s.bestBvs)}</b></div>
+      <div class="kv"><span>出自</span><b class="mono">BV=${s.bestBvsBv} · ${fmt(s.bestBvsTime)}s</b></div>
+      <div class="kv"><span>NF / FL 局数</span><b class="mono">${s.nfGames.toLocaleString()} / ${s.flGames.toLocaleString()}</b></div>
+    </div>`;
+  }).join('');
+}
+
+/* ---------------- 图表 ---------------- */
+
+function rowsOf(lv) {
+  return DATA.records.filter(r => r.level === lv);
+}
+
+function buildCharts() {
+  $('#charts').innerHTML = LEVELS.map(lv => {
+    const s = DATA.summary[lv];
+    if (!s || !s.bvCount) return '';
+    return `<div class="chart" data-lv="${lv}">
+      <canvas></canvas>
+      <div class="cap"><span><i class="dot" style="background:${LCOLOR[lv]}"></i>${LCN[lv]}</span>
+        <span>${s.bvCount} 个 BV</span></div>
+    </div>`;
+  }).join('');
+  document.querySelectorAll('.chart').forEach(box => {
+    const cv = box.querySelector('canvas');
+    cv.addEventListener('mousemove', (e) => onHover(e, cv, box));
+    cv.addEventListener('mouseleave', () => { $('#tooltip').style.opacity = 0; });
+    cv.addEventListener('click', (e) => {
+      const hit = nearestPoint(e, cv);
+      if (hit) selectRow(box.dataset.lv, hit.d.bv);
+    });
+  });
+  drawCharts();
+}
+
+function setupCanvas(cv) {
+  const dpr = window.devicePixelRatio || 1;
+  const w = cv.clientWidth, h = cv.clientHeight;
+  cv.width = Math.round(w * dpr);
+  cv.height = Math.round(h * dpr);
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  return { ctx, w, h };
+}
+
+function drawCharts() {
+  document.querySelectorAll('.chart').forEach(box => {
+    const lv = box.dataset.lv;
+    const cv = box.querySelector('canvas');
+    const rows = rowsOf(lv);
+    if (!rows.length) return;
+    const { ctx, w, h } = setupCanvas(cv);
+    const m = VIEW.metric;
+    const vals = rows.map(r => r[m]);
+    const xmin = Math.min(...rows.map(r => r.bv)), xmax = Math.max(...rows.map(r => r.bv));
+    let ymin = Math.min(...vals), ymax = Math.max(...vals);
+    const pad = (ymax - ymin) * 0.18 || 1;
+    if (m === 'time') { ymax += pad; ymin = Math.max(0, ymin - pad); }
+    else { ymax += pad; ymin = Math.max(0, ymin - pad); }
+
+    const L = 46, R = 10, T = 12, B = 26;
+    const X = (bv) => L + (bv - xmin) / Math.max(1, xmax - xmin) * (w - L - R);
+    const Y = (v) => h - B - (v - ymin) / Math.max(1e-9, ymax - ymin) * (h - T - B);
+
+    // 网格与坐标轴
+    ctx.strokeStyle = '#eef1f5'; ctx.lineWidth = 1;
+    ctx.fillStyle = '#8a93a0'; ctx.font = '10px ui-monospace,Consolas,monospace';
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    for (let i = 0; i <= 4; i++) {
+      const v = ymin + (ymax - ymin) * i / 4;
+      const y = Y(v);
+      ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(w - R, y); ctx.stroke();
+      ctx.fillText(m === 'time' ? v.toFixed(1) : v.toFixed(2), L - 6, y);
+    }
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    for (let i = 0; i <= 4; i++) {
+      const bv = Math.round(xmin + (xmax - xmin) * i / 4);
+      ctx.fillText(String(bv), X(bv), h - B + 6);
+    }
+
+    // 面积 + 折线 + 点
+    const pts = rows.slice().sort((a, b) => a.bv - b.bv);
+    const grd = ctx.createLinearGradient(0, T, 0, h - B);
+    grd.addColorStop(0, LCOLOR[lv] + '33');
+    grd.addColorStop(1, LCOLOR[lv] + '00');
+    ctx.beginPath();
+    pts.forEach((r, i) => i ? ctx.lineTo(X(r.bv), Y(r[m])) : ctx.moveTo(X(r.bv), Y(r[m])));
+    ctx.lineWidth = 1.8; ctx.strokeStyle = LCOLOR[lv]; ctx.stroke();
+    ctx.lineTo(X(pts[pts.length - 1].bv), h - B); ctx.lineTo(X(pts[0].bv), h - B); ctx.closePath();
+    ctx.fillStyle = grd; ctx.fill();
+
+    pts.forEach(r => {
+      ctx.beginPath();
+      ctx.arc(X(r.bv), Y(r[m]), VIEW.selected === lv + '|' + r.bv ? 4.2 : 2.4, 0, Math.PI * 2);
+      ctx.fillStyle = LCOLOR[lv]; ctx.fill();
+      if (VIEW.selected === lv + '|' + r.bv) {
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.6; ctx.stroke();
+      }
+    });
+
+    cv._pts = pts.map(r => ({ d: r, x: X(r.bv), y: Y(r[m]) }));
+  });
+}
+
+function nearestPoint(e, cv) {
+  const rect = cv.getBoundingClientRect();
+  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  let best = null, bd = 1e9;
+  for (const p of (cv._pts || [])) {
+    const d = (p.x - mx) ** 2 + (p.y - my) ** 2;
+    if (d < bd) { bd = d; best = p; }
+  }
+  return bd < 36 * 36 ? best : null;
+}
+
+function onHover(e, cv, box) {
+  const hit = nearestPoint(e, cv);
+  const tip = $('#tooltip');
+  if (!hit) { tip.style.opacity = 0; return; }
+  const r = hit.d;
+  tip.innerHTML = `<b>BV=${r.bv}</b> · ${fmt(r.time)}s · ${fmt(r.bvs)} 3BV/s<br>
+    ${r.style}｜${r.date || '日期未知'}｜该 BV ${r.games} 局<br>
+    <span style="opacity:.75">${r.file}</span>`;
+  tip.style.opacity = 1;
+  tip.style.left = Math.min(window.innerWidth - 330, e.clientX + 14) + 'px';
+  tip.style.top = (e.clientY - 10) + 'px';
+}
+
+/* ---------------- 表格 ---------------- */
+
+function filtered() {
+  let rows = DATA.records;
+  if (VIEW.level) rows = rows.filter(r => r.level === VIEW.level);
+  const q = VIEW.q.trim().toLowerCase();
+  if (q) rows = rows.filter(r => String(r.bv).includes(q) || r.file.toLowerCase().includes(q));
+  const k = VIEW.sortKey, dir = VIEW.sortDir === 'asc' ? 1 : -1;
+  const lvOrder = { beg: 0, int: 1, exp: 2 };
+  rows = rows.slice().sort((a, b) => {
+    let x, y;
+    if (k === 'level') { x = lvOrder[a.level]; y = lvOrder[b.level]; if (x === y) return (a.bv - b.bv) * dir; }
+    else if (k === 'date') { x = a.date || ''; y = b.date || ''; }
+    else { x = a[k]; y = b[k]; }
+    return x < y ? -dir : x > y ? dir : 0;
+  });
+  return rows;
+}
+
+function renderTable() {
+  const rows = filtered();
+  const tb = $('#tbl tbody');
+  tb.innerHTML = rows.map(r => `<tr data-key="${r.level}|${r.bv}" class="${VIEW.selected === r.level + '|' + r.bv ? 'sel' : ''}">
+    <td class="l"><span class="lvt" style="background:${LCOLOR[r.level]};padding:1px 7px;border-radius:5px;color:#fff;font-size:11px;font-weight:600">${LCN[r.level].slice(0, 2)}</span></td>
+    <td class="mono">${r.bv}</td>
+    <td class="mono t">${fmt(r.time)}</td>
+    <td class="mono">${fmt(r.bvs)}</td>
+    <td class="mono" style="color:var(--muted)">${r.games}</td>
+    <td><span class="tag ${r.style.toLowerCase()}">${r.style}</span></td>
+    <td class="mono" style="color:var(--muted)">${r.date || '—'}</td>
+    <td class="mono" style="color:var(--muted)">${r.nfTime === null ? '—' : fmt(r.nfTime)}</td>
+    <td class="mono" style="color:var(--muted)">${r.flTime === null ? '—' : fmt(r.flTime)}</td>
+    <td class="file" title="${r.file}">${r.file}</td>
+  </tr>`).join('');
+  $('#rowCount').textContent = `${rows.length} 行` +
+    (rows.length !== DATA.records.length ? ` / 共 ${DATA.records.length}` : '') +
+    ` · 点击行查看详情`;
+  tb.querySelectorAll('tr').forEach(tr => {
+    tr.addEventListener('click', () => {
+      const [lv, bv] = tr.dataset.key.split('|');
+      selectRow(lv, +bv);
+    });
+  });
+}
+
+function selectRow(lv, bv) {
+  VIEW.selected = lv + '|' + bv;
+  const r = DATA.records.find(x => x.level === lv && x.bv === bv);
+  if (!r) return;
+  renderTable();
+  drawCharts();
+  const d = $('#detail');
+  $('#dTitle').innerHTML = `<span class="lvt" style="background:${LCOLOR[lv]}">${LCN[lv]}</span>
+    BV=${r.bv} · ${fmt(r.time)}s · ${fmt(r.bvs)} 3BV/s · ${r.style} · ${r.games} 局`;
+  $('#dFile').textContent = `${DATA.root}\\${r.path}`;
+  d.classList.add('show');
+  const sel = document.querySelector(`#tbl tbody tr[data-key="${lv}|${bv}"]`);
+  if (sel) sel.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+/* ---------------- 空数据提示 ---------------- */
+
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function renderEmptyHint() {
+  const total = LEVELS.reduce((n, lv) => {
+    const s = DATA.summary[lv];
+    return n + (s && s.bvCount ? s.bvCount : 0);
+  }, 0);
+  let box = document.getElementById('emptyHint');
+  if (total) { if (box) box.remove(); return; }
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'emptyHint';
+    box.className = 'empty-hint';
+    document.querySelector('.wrap').insertBefore(box, document.getElementById('cards'));
+  }
+  box.innerHTML =
+    '<b>在 <code>' + esc(DATA.root || '') + '</code> 下没有找到任何 .avf 录像。</b><br>' +
+    '请确认：① 本程序放在扫雷安装目录里，和 <code>replays</code> / <code>replays2</code> 同级；' +
+    '② 录像在别处的话，关掉黑窗口重新启动并指定目录：' +
+    '<code>python server.py --root "你的扫雷目录"</code>。<br>' +
+    '指定正确后点右上角「重新扫描」即可。';
+}
+
+function renderAll() {
+  renderEmptyHint();
+  renderCards();
+  buildCharts();
+  renderTable();
+  const v = DATA.verification, s = DATA.scan;
+  $('#meta').textContent =
+    `扫描根目录 ${DATA.root} · 扫描 ${s.files.toLocaleString()} 个文件（${s.dirs.length} 个录像目录）→ 去重后 ${s.unique.toLocaleString()} 局，` +
+    `跳过同名副本 ${s.duplicates} 个` + (s.unparsed ? `，${s.unparsed} 个文件名不符格式` : '') +
+    ` · 深度校验 ${v.checked} 条：一致 ${v.ok}、不一致 ${v.mismatch}、未取到 ${v.missing}` +
+    ` · 数据更新于 ${DATA.generated.replace('T', ' ')}（${DATA.elapsedMs} ms）`;
+}
+
+/* ---------------- 交互 ---------------- */
+
+$('#metricSeg').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  [...e.currentTarget.children].forEach(x => x.classList.toggle('on', x === b));
+  VIEW.metric = b.dataset.m;
+  $('#chartHint').textContent = VIEW.metric === 'time'
+    ? '横轴 BV，纵轴最快时间；点圆点可定位到表格'
+    : '横轴 BV，纵轴 3BV/s；点圆点可定位到表格';
+  drawCharts();
+});
+
+$('#levelSeg').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  [...e.currentTarget.children].forEach(x => x.classList.toggle('on', x === b));
+  VIEW.level = b.dataset.l;
+  renderTable();
+});
+
+$('#q').addEventListener('input', (e) => { VIEW.q = e.target.value; renderTable(); });
+
+document.querySelectorAll('#tbl thead th[data-s]').forEach(th => {
+  th.addEventListener('click', () => {
+    const k = th.dataset.s;
+    if (VIEW.sortKey === k) VIEW.sortDir = VIEW.sortDir === 'asc' ? 'desc' : 'asc';
+    else { VIEW.sortKey = k; VIEW.sortDir = 'asc'; }
+    document.querySelectorAll('#tbl thead th').forEach(o => o.classList.remove('on'));
+    th.classList.add('on');
+    renderTable();
+  });
+});
+
+$('#btnRescan').onclick = async () => {
+  $('#btnRescan').disabled = true;
+  await load(true);
+  $('#btnRescan').disabled = false;
+  toast('已重新扫描');
+};
+
+$('#btnCsv').onclick = () => { window.location.href = '/api/csv'; };
+
+$('#btnStop').onclick = async () => {
+  if (!confirm('停止本地服务？页面将失去数据连接，关掉即可。')) return;
+  try { await fetch('/api/shutdown'); } catch (e) {}
+  $('#live').className = 'pill';
+  $('#live').textContent = '服务已停止';
+};
+
+$('#dClose').onclick = () => { $('#detail').classList.remove('show'); VIEW.selected = null; renderTable(); drawCharts(); };
+$('#dCopy').onclick = async () => {
+  const t = $('#dFile').textContent;
+  try { await navigator.clipboard.writeText(t); toast('路径已复制'); }
+  catch (e) { toast('复制失败，请手动选择'); }
+};
+
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(drawCharts, 150);
+});
+
+/* ---------------- 自动刷新：录像目录一变就更新 ---------------- */
+
+async function poll() {
+  try {
+    const r = await fetch('/api/version', { cache: 'no-store' });
+    const v = await r.json();
+    if (DATA && v.signature !== DATA.signature) { await load(); toast('检测到新录像，已更新'); }
+  } catch (e) { /* 服务停了就静默 */ }
+  setTimeout(poll, 20000);
+}
+
+load().then(() => setTimeout(poll, 20000));
+</script>
+</body>
+</html>
